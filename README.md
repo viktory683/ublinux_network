@@ -1,5 +1,10 @@
 # Network GUI
 
+## В процессе
+
+![В процессе](image.png)
+## Рефернс
+
 ![Референс](ubl-settings-network_page_1.jpg)
 
 ## Ссылки
