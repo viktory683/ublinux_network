@@ -27,8 +27,10 @@ THE SOFTWARE.
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <!-- interface-license-type mit -->
-  <object class="GtkWindow">
+  <object class="GtkEntryCompletion"/>
+  <object class="GtkWindow" id="topWindow">
     <property name="can-focus">False</property>
+    <signal name="destroy" handler="onExit" swapped="no"/>
     <child>
       <!-- n-columns=1 n-rows=4 -->
       <object class="GtkGrid">
@@ -74,7 +76,7 @@ THE SOFTWARE.
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkComboBoxText">
+                          <object class="GtkComboBoxText" id="deviceBox">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <property name="margin-start">32</property>
@@ -358,7 +360,258 @@ THE SOFTWARE.
                 <property name="can-focus">False</property>
                 <property name="left-padding">12</property>
                 <child>
-                  <placeholder/>
+                  <!-- n-columns=4 n-rows=5 -->
+                  <object class="GtkGrid">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="margin-start">8</property>
+                    <property name="margin-end">8</property>
+                    <property name="hexpand">True</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="label" translatable="yes">HTTP-прокси</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="label" translatable="yes">HTTPS-прокси</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="label" translatable="yes">FTP-прокси</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="label" translatable="yes">Без прокси</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="halign">start</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="label" translatable="yes">Polipo-прокси</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">0</property>
+                        <property name="top-attach">4</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="draw-indicator">True</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">1</property>
+                        <property name="top-attach">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBoxText">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="halign">end</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <items>
+                          <item translatable="yes">socks5</item>
+                        </items>
+                      </object>
+                      <packing>
+                        <property name="left-attach">3</property>
+                        <property name="top-attach">4</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="margin-left">8</property>
+                        <property name="margin-right">8</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="draw-indicator">True</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">1</property>
+                        <property name="top-attach">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="margin-left">8</property>
+                        <property name="margin-right">8</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="draw-indicator">True</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">1</property>
+                        <property name="top-attach">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="margin-left">8</property>
+                        <property name="margin-right">8</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="draw-indicator">True</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">1</property>
+                        <property name="top-attach">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="margin-left">8</property>
+                        <property name="margin-right">8</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                        <property name="draw-indicator">True</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">1</property>
+                        <property name="top-attach">4</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">2</property>
+                        <property name="top-attach">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="margin-left">8</property>
+                        <property name="margin-right">8</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">2</property>
+                        <property name="top-attach">1</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="margin-left">8</property>
+                        <property name="margin-right">8</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">2</property>
+                        <property name="top-attach">2</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="margin-left">8</property>
+                        <property name="margin-right">8</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">2</property>
+                        <property name="top-attach">3</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="margin-left">8</property>
+                        <property name="margin-right">8</property>
+                        <property name="margin-start">8</property>
+                        <property name="margin-end">8</property>
+                      </object>
+                      <packing>
+                        <property name="left-attach">2</property>
+                        <property name="top-attach">4</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                    <child>
+                      <placeholder/>
+                    </child>
+                  </object>
                 </child>
               </object>
             </child>
@@ -405,6 +658,8 @@ THE SOFTWARE.
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <property name="halign">start</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                             <property name="hexpand">True</property>
                             <property name="label" translatable="yes">Avahi</property>
                           </object>
@@ -418,6 +673,8 @@ THE SOFTWARE.
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <property name="halign">start</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                             <property name="label" translatable="yes">Winbind</property>
                           </object>
                           <packing>
@@ -430,6 +687,8 @@ THE SOFTWARE.
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
                             <property name="halign">start</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                             <property name="label" translatable="yes">Основной DNS</property>
                           </object>
                           <packing>
@@ -442,6 +701,8 @@ THE SOFTWARE.
                             <property name="visible">True</property>
                             <property name="can-focus">True</property>
                             <property name="receives-default">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                             <property name="hexpand">True</property>
                             <property name="use-stock">True</property>
                             <property name="draw-indicator">True</property>
@@ -456,6 +717,8 @@ THE SOFTWARE.
                             <property name="visible">True</property>
                             <property name="can-focus">True</property>
                             <property name="receives-default">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                             <property name="draw-indicator">True</property>
                           </object>
                           <packing>
@@ -467,6 +730,8 @@ THE SOFTWARE.
                           <object class="GtkEntry">
                             <property name="visible">True</property>
                             <property name="can-focus">True</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
@@ -524,6 +789,8 @@ THE SOFTWARE.
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                             <property name="label" translatable="yes">IPv6</property>
                           </object>
                           <packing>
@@ -535,6 +802,8 @@ THE SOFTWARE.
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                             <property name="label" translatable="yes">Режим роутера</property>
                           </object>
                           <packing>
@@ -558,6 +827,8 @@ THE SOFTWARE.
                           <object class="GtkLabel">
                             <property name="visible">True</property>
                             <property name="can-focus">False</property>
+                            <property name="margin-start">8</property>
+                            <property name="margin-end">8</property>
                             <property name="label" translatable="yes">Траффик через TOR</property>
                           </object>
                           <packing>
@@ -665,5 +936,4 @@ THE SOFTWARE.
       </object>
     </child>
   </object>
-  <object class="GtkEntryCompletion"/>
 </interface>
