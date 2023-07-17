@@ -82,10 +82,6 @@ THE SOFTWARE.
                             <property name="margin-start">32</property>
                             <property name="margin-end">16</property>
                             <property name="hexpand">True</property>
-                            <items>
-                              <item translatable="yes">eth0</item>
-                              <item translatable="yes">wlan0</item>
-                            </items>
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
