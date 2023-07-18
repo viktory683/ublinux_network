@@ -1,4 +1,5 @@
 #include "handlers.h"
+#include "helpers.h"
 #include <arpa/inet.h>
 #include <gtk/gtk.h>
 #include <jansson.h>
@@ -23,83 +24,6 @@ void updateComboBoxItems(GtkComboBoxText* box, int itemc, char** items) {
     }
 
     gtk_combo_box_set_active(GTK_COMBO_BOX(box), 0);
-}
-
-int safe_check() {
-    char* commands[] = { "nmcli", "jc" };
-    int commands_count = sizeof(commands) / sizeof(commands[0]);
-
-    bool error = false;
-    for (int i = 0; i < commands_count; i++) {
-        char command[sizeof("which  > /dev/null 2>&1") + sizeof(commands[i])] = "which ";
-        strcat(command, commands[i]);
-        strcat(command, " > /dev/null 2>&1");
-
-        if (system(command)) {
-            error = true;
-            fprintf(stderr, "command: '%s' is not found in system\n", commands[i]);
-        }
-    }
-    return error;
-}
-
-/**
- * Executes a system command and stores the command output in a dynamically allocated memory.
- *
- * Written with phind (https://www.phind.com/agent?cache=clk6itjk4005jl708blm5tvza)
- *
- * @param command The command to execute.
- * @param output A pointer to a character pointer where the command output will be stored.
- *               The memory for the output will be dynamically allocated and should be freed by the caller.
- */
-void executeCommand(const char* command, char** output) {
-    FILE* fp;
-    char buffer[1024];
-    size_t outputSize = 0;
-    size_t bufferSize = sizeof(buffer);
-
-    fp = popen(command, "r");
-    if (fp == NULL) {
-        fprintf(stderr, "Failed to execute command\n");
-        return;
-    }
-
-    *output = NULL;
-
-    while (fgets(buffer, bufferSize, fp) != NULL) {
-        size_t lineSize = strlen(buffer);
-
-        char* newOutput = realloc(*output, outputSize + lineSize + 1);
-        if (newOutput == NULL) {
-            fprintf(stderr, "Failed to allocate memory\n");
-            free(*output);
-            *output = NULL;
-            break;
-        }
-
-        *output = newOutput;
-        memcpy(*output + outputSize, buffer, lineSize);
-        outputSize += lineSize;
-    }
-
-    if (*output != NULL) {
-        (*output)[outputSize] = '\0';
-    }
-
-    pclose(fp);
-}
-
-json_t* parse_json(const char* text) {
-    json_t* root;
-    json_error_t error;
-    root = json_loads(text, 0, &error);
-
-    if (!root) {
-        fprintf(stderr, "Error: on line %d: %s\n", error.line, error.text);
-        return NULL;
-    }
-
-    return root;
 }
 
 void parse_devices(json_t* root, char*** devices, int* devices_count) {
@@ -147,18 +71,18 @@ void get_devices(char*** devices, int* devices_count) {
 char* validIpSymbols = "1234567890.";
 
 void ipAddressChanged(GtkEntry* entry, gpointer user_data) {
-    char* text = gtk_entry_get_text(entry);
+    const char* text = gtk_entry_get_text(entry);
     printf("text: %s\n", text);
 
-    int ipLen = strlen(text);
+    // int ipLen = strlen(text);
     bool wrongSymbols = false;
 
-    for (int i = 0; i < ipLen; i++) {
-        if (!strchr(validIpSymbols, text[i])) {
-            wrongSymbols = true;
-            break;
-        }
-    }
+    // for (int i = 0; i < ipLen; i++) {
+    //     if (!strchr(validIpSymbols, text[i])) {
+    //         wrongSymbols = true;
+    //         break;
+    //     }
+    // }
 
     // 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
     // 1  2  3  .  1  2  3  .  1  2  3  .  1  2  3
@@ -183,7 +107,7 @@ void ipAddressChanged(GtkEntry* entry, gpointer user_data) {
                 "Invalid Symbol\nIP address can contain only digits and a point ([0-9] and '.')\nExample: 192.168.0.1");
         }
 
-        gtk_widget_show(ipAddressErrorPopup);
+        gtk_popover_popup(ipAddressErrorPopup);
         return;
     }
 
@@ -229,9 +153,9 @@ int main(int argc, char* argv[]) {
 
     g_signal_connect(G_OBJECT(topWindow), "destroy", gtk_main_quit, NULL);
 
-    g_signal_connect(G_OBJECT(deviceBox), "changed", deviceBoxHandler, NULL);
+    g_signal_connect(G_OBJECT(deviceBox), "changed", G_CALLBACK(deviceBoxHandler), NULL);
 
-    g_signal_connect(G_OBJECT(ipAddress), "changed", ipAddressChanged, NULL);
+    g_signal_connect(G_OBJECT(ipAddress), "changed", G_CALLBACK(ipAddressChanged), NULL);
 
     char** devices;
     int devices_count;
@@ -246,7 +170,7 @@ int main(int argc, char* argv[]) {
     // freeing up memory
     g_object_unref(G_OBJECT(builder));
 
-    gtk_widget_show(topWindow);
+    gtk_widget_show(GTK_WIDGET(topWindow));
 
     gtk_main();
 
