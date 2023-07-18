@@ -27,7 +27,6 @@ THE SOFTWARE.
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <!-- interface-license-type mit -->
-  <object class="GtkEntryCompletion"/>
   <object class="GtkWindow" id="topWindow">
     <property name="can-focus">False</property>
     <signal name="destroy" handler="onExit" swapped="no"/>
@@ -157,9 +156,6 @@ THE SOFTWARE.
                                   <object class="GtkComboBoxText">
                                     <property name="visible">True</property>
                                     <property name="can-focus">False</property>
-                                    <items>
-                                      <item translatable="yes">dhcp0</item>
-                                    </items>
                                   </object>
                                   <packing>
                                     <property name="left-attach">1</property>
@@ -175,18 +171,6 @@ THE SOFTWARE.
                                   </object>
                                   <packing>
                                     <property name="left-attach">0</property>
-                                    <property name="top-attach">2</property>
-                                  </packing>
-                                </child>
-                                <child>
-                                  <object class="GtkEntry">
-                                    <property name="visible">True</property>
-                                    <property name="can-focus">True</property>
-                                    <property name="max-length">15</property>
-                                    <property name="placeholder-text" translatable="yes">192.168.1.32</property>
-                                  </object>
-                                  <packing>
-                                    <property name="left-attach">1</property>
                                     <property name="top-attach">2</property>
                                   </packing>
                                 </child>
@@ -310,6 +294,18 @@ THE SOFTWARE.
                                     <property name="top-attach">7</property>
                                   </packing>
                                 </child>
+                                <child>
+                                  <object class="GtkEntry" id="ipAddress">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">True</property>
+                                    <property name="max-length">15</property>
+                                    <property name="placeholder-text" translatable="yes">192.168.1.32</property>
+                                  </object>
+                                  <packing>
+                                    <property name="left-attach">1</property>
+                                    <property name="top-attach">2</property>
+                                  </packing>
+                                </child>
                               </object>
                             </child>
                           </object>
@@ -362,6 +358,7 @@ THE SOFTWARE.
                     <property name="can-focus">False</property>
                     <property name="margin-start">8</property>
                     <property name="margin-end">8</property>
+                    <property name="margin-bottom">8</property>
                     <property name="hexpand">True</property>
                     <child>
                       <object class="GtkLabel">
@@ -929,6 +926,20 @@ THE SOFTWARE.
             <property name="top-attach">0</property>
           </packing>
         </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkPopover" id="ipAddressPopup">
+    <property name="can-focus">False</property>
+    <property name="relative-to">ipAddress</property>
+    <property name="position">bottom</property>
+    <child>
+      <object class="GtkLabel" id="ipAddressErrorText">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="xpad">8</property>
+        <property name="ypad">8</property>
+        <property name="label" translatable="yes">Error?</property>
       </object>
     </child>
   </object>
