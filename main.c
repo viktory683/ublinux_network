@@ -85,7 +85,50 @@ void parse_int(json_t* object, const char* key, int* value) {
     *value = json_integer_value(value_t);
 }
 
-// TODO split into smaller functions
+GPtrArray* parse_string_array(json_t* obj, const char* key_prefix, int start) {
+    GPtrArray* array = g_ptr_array_new();
+
+    char* value;
+    do {
+        char key[32];
+        strcpy(key, key_prefix);
+        char str_index[2];
+        sprintf(str_index, "%d", start);
+        strcat(key, str_index);
+        value = parse_string(obj, key);
+        if (value) {
+            g_ptr_array_add(array, value);
+        }
+        start++;
+    } while (value);
+
+    return array;
+}
+
+GPtrArray* parse_IPRoute_array(json_t* obj, const char* key_prefix, int start) {
+    GPtrArray *array = g_ptr_array_new();
+    
+    json_t* value;
+    do {
+        char key[32];
+        strcpy(key, key_prefix);
+        char str_index[2];
+        sprintf(str_index, "%d", start);
+        strcat(key, str_index);
+        value = json_object_get(obj, key);
+        if (value) {
+            struct IPRoute* ip_route = malloc(sizeof(struct IPRoute));
+            ip_route->dst = parse_string(value, "dst");
+            ip_route->nh = parse_string(value, "nh");
+            parse_int(value, "mt", &(ip_route->mt));
+            g_ptr_array_add(array, ip_route);
+        }
+        start++;
+    } while (value);
+
+    return array;
+}
+
 void parse_devices(json_t* root, GPtrArray** devices) {
     if (!json_is_array(root)) {
         fprintf(stderr, "error: root is not an array\n");
@@ -116,89 +159,11 @@ void parse_devices(json_t* root, GPtrArray** devices) {
         dev->ip4_gateway = parse_string(data, "ip4_gateway");
         dev->ip6_gateway = parse_string(data, "ip6_gateway");
 
-        dev->ip4_addresses = g_ptr_array_new();
-        int ip4_address_index = 1;
-        char* ip4_address;
-        do {
-            char key[16] = "ip4_address_";
-            char str_index[2];
-            sprintf(str_index, "%d", ip4_address_index);
-            strcat(key, str_index);
-            ip4_address = parse_string(data, key);
-            if (ip4_address) {
-                g_ptr_array_add(dev->ip4_addresses, ip4_address);
-            }
-            ip4_address_index++;
-        } while (ip4_address);
-
-        dev->ip4_dnses = g_ptr_array_new();
-        int ip4_dns_index = 1;
-        char* ip4_dns;
-        do {
-            char key[16] = "ip4_dns_";
-            char str_index[2];
-            sprintf(str_index, "%d", ip4_dns_index);
-            strcat(key, str_index);
-            ip4_dns = parse_string(data, key);
-            if (ip4_dns) {
-                g_ptr_array_add(dev->ip4_dnses, ip4_dns);
-            }
-            ip4_dns_index++;
-        } while (ip4_dns);
-
-        dev->ip4_routes = g_ptr_array_new();
-        int ip4_route_index = 1;
-        json_t* ip4_route;
-        do {
-            char key[16] = "ip4_route_";
-            char str_index[2];
-            sprintf(str_index, "%d", ip4_route_index);
-            strcat(key, str_index);
-            ip4_route = json_object_get(data, key);
-            if (ip4_route) {
-                struct IPRoute* ip_route = malloc(sizeof(struct IPRoute));
-                ip_route->dst = parse_string(ip4_route, "dst");
-                ip_route->nh = parse_string(ip4_route, "nh");
-                parse_int(ip4_route, "mt", &(ip_route->mt));
-                g_ptr_array_add(dev->ip4_routes, ip_route);
-            }
-            ip4_route_index++;
-        } while (ip4_route);
-
-        dev->ip6_addresses = g_ptr_array_new();
-        int ip6_address_index = 1;
-        char* ip6_address;
-        do {
-            char key[16] = "ip6_address_";
-            char str_index[2];
-            sprintf(str_index, "%d", ip6_address_index);
-            strcat(key, str_index);
-            ip6_address = parse_string(data, key);
-            if (ip6_address) {
-                g_ptr_array_add(dev->ip6_addresses, ip6_address);
-            }
-            ip6_address_index++;
-
-        } while (ip6_address);
-
-        dev->ip6_routes = g_ptr_array_new();
-        int ip6_route_index = 1;
-        json_t* ip6_route;
-        do {
-            char key[16] = "ip6_route_";
-            char str_index[2];
-            sprintf(str_index, "%d", ip6_route_index);
-            strcat(key, str_index);
-            ip6_route = json_object_get(data, key);
-            if (ip6_route) {
-                struct IPRoute* ip_route = malloc(sizeof(struct IPRoute));
-                ip_route->dst = parse_string(ip6_route, "dst");
-                ip_route->nh = parse_string(ip6_route, "nh");
-                parse_int(ip6_route, "mt", &(ip_route->mt));
-                g_ptr_array_add(dev->ip6_routes, ip_route);
-            }
-            ip6_route_index++;
-        } while (ip6_route);
+        dev->ip4_addresses = parse_string_array(data, "ip4_address_", 1);
+        dev->ip4_dnses = parse_string_array(data, "ip4_dns_", 1);
+        dev->ip4_routes = parse_IPRoute_array(data, "ip4_route_", 1);
+        dev->ip6_addresses = parse_string_array(data, "ip6_address_", 1);
+        dev->ip6_routes = parse_IPRoute_array(data, "ip6_route_", 1);
 
         g_ptr_array_add(*devices, dev);
     }
