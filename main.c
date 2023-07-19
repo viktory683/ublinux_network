@@ -68,21 +68,21 @@ char* parse_string(json_t* object, const char* key) {
     return json_string_value(value);
 }
 
-int parse_int(json_t* object, const char* key) {
+void parse_int(json_t* object, const char* key, int* value) {
     if (!json_is_object(object)) {
         fprintf(stderr, "error: object is not a json object\n");
         // json_decref(object);
-        return NULL;
+        // return NULL;
     }
 
-    json_t* value = json_object_get(object, key);
-    if (!json_is_integer(value)) {
+    json_t* value_t = json_object_get(object, key);
+    if (!json_is_integer(value_t)) {
         fprintf(stderr, "error: %s is not a integer\n", key);
         // json_decref(object);
-        return NULL;
+        // return NULL;
     }
 
-    return json_integer_value(value);
+    *value = json_integer_value(value_t);
 }
 
 // TODO split into smaller functions
@@ -108,8 +108,8 @@ void parse_devices(json_t* root, GPtrArray** devices) {
         dev->device = parse_string(data, "device");
         dev->type = parse_string(data, "type");
         dev->hwaddr = parse_string(data, "hwaddr");
-        dev->mtu = parse_int(data, "mtu");
-        dev->state = parse_int(data, "state");
+        parse_int(data, "mtu", &(dev->mtu));
+        parse_int(data, "state", &(dev->state));
         dev->state_text = parse_string(data, "state_text");
         dev->connection = parse_string(data, "connection");
         dev->con_path = parse_string(data, "con_path");
@@ -159,7 +159,7 @@ void parse_devices(json_t* root, GPtrArray** devices) {
                 struct IPRoute* ip_route = malloc(sizeof(struct IPRoute));
                 ip_route->dst = parse_string(ip4_route, "dst");
                 ip_route->nh = parse_string(ip4_route, "nh");
-                ip_route->mt = parse_int(ip4_route, "mt");
+                parse_int(ip4_route, "mt", &(ip_route->mt));
                 g_ptr_array_add(dev->ip4_routes, ip_route);
             }
             ip4_route_index++;
@@ -194,7 +194,7 @@ void parse_devices(json_t* root, GPtrArray** devices) {
                 struct IPRoute* ip_route = malloc(sizeof(struct IPRoute));
                 ip_route->dst = parse_string(ip6_route, "dst");
                 ip_route->nh = parse_string(ip6_route, "nh");
-                ip_route->mt = parse_int(ip6_route, "mt");
+                parse_int(ip6_route, "mt", &(ip_route->mt));
                 g_ptr_array_add(dev->ip6_routes, ip_route);
             }
             ip6_route_index++;
