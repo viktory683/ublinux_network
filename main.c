@@ -106,8 +106,8 @@ GPtrArray* parse_string_array(json_t* obj, const char* key_prefix, int start) {
 }
 
 GPtrArray* parse_IPRoute_array(json_t* obj, const char* key_prefix, int start) {
-    GPtrArray *array = g_ptr_array_new();
-    
+    GPtrArray* array = g_ptr_array_new();
+
     json_t* value;
     do {
         char key[32];
@@ -178,57 +178,68 @@ void get_devices(GPtrArray** devices) {
     free(output);
 }
 
-char* validIpSymbols = "1234567890.";
+int isIPValid(const char* ip_address) {
+    // 1 | invalid symbols
+    char* validSymbols = "1234567890.";
+    for (int i = 0; i < strlen(ip_address); i++) {
+        if (!strchr(validSymbols, ip_address[i])) {
+            return 1;
+        }
+    }
+
+    // 2 | octets != 4
+    int point_count = 0;
+    for (int i = 0; i < strlen(ip_address); i++) {
+        if (ip_address[i] == '.') {
+            point_count++;
+        }
+    }
+    if (point_count != 3) {
+        return 2;
+    }
+
+    // 3 | 0 <= octet < 256
+    int octets[4];
+    sscanf(ip_address, "%d.%d.%d.%d", &octets[0], &octets[1], &octets[2], &octets[3]);
+    for (int i = 0; i < 4; i++) {
+        if (octets[i] < 0 || octets[i] > 255) {
+            return 3;
+        }
+    }
+
+    return 0;
+}
 
 void ipAddressChanged(GtkEntry* entry, gpointer user_data) {
     const char* text = gtk_entry_get_text(entry);
     printf("text: %s\n", text);
+}
 
-    bool wrongSymbols = false;
+gboolean ipAddressEntered(GtkWidget* entry, GdkEventFocus event, gpointer user_data) {
+    const char* ip_address = gtk_entry_get_text(ipAddress);
 
-    for (int i = 0; i < strlen(text); i++) {
-        if (!strchr(validIpSymbols, text[i])) {
-            wrongSymbols = true;
-            break;
-        }
+    char* errorMessage = NULL;
+    switch (isIPValid(ip_address)) {
+    case 1:
+        errorMessage = "IP address can only contain numbers and dots\nExample: 192.168.0.1";
+        break;
+    case 2:
+        errorMessage = "IP address must consist of four octets";
+        break;
+    case 3:
+        errorMessage = "The octets of an IP address can only contain numbers in the range from 0 to 255";
+        break;
     }
-
-    // 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14
-    // 1  2  3  .  1  2  3  .  1  2  3  .  1  2  3
-    // TODO octets can be less than 100 and dump check by indexes not working then
-    bool octetsPoints = false;
-    // for (int i = 3; i < ipLen; i += 4) {
-    //     if (text[i] != '.') {
-    //         octetsPoints = true;
-    //         break;
-    //     }
-    // }
-
-    if (octetsPoints || wrongSymbols) {
-        if (octetsPoints) {
-            gtk_label_set_text(ipAddressErrorText,
-                               "IP address consists of four octets separated by a dot\nExample: 192.168.0.1");
-        }
-
-        if (wrongSymbols) {
-            gtk_label_set_text(
-                ipAddressErrorText,
-                "Invalid Symbol\nIP address can contain only digits and a point ([0-9] and '.')\nExample: 192.168.0.1");
-        }
-
+    if (errorMessage) {
+        gtk_label_set_text(ipAddressErrorText, errorMessage);
         gtk_popover_popup(ipAddressErrorPopup);
-        return;
+        return false;
     }
 
-    struct in_addr addr;
-    addr.s_addr = inet_addr(text);
-
-    char ip_address[INET_ADDRSTRLEN];
-    if (inet_ntop(AF_INET, &(addr.s_addr), ip_address, INET_ADDRSTRLEN) == NULL) {
-        fprintf(stderr, "Invalid IP address");
-        return;
-    }
+    // TODO change ip address of interface with nmcli
     printf("IP: %s\n", ip_address);
+
+    return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -247,7 +258,7 @@ int main(int argc, char* argv[]) {
 
     // * UI file should be placed to the same directory as the application
     if (!gtk_builder_add_from_file(builder, UI_FILE, &err)) {
-        g_warning(err->message);
+        g_warning("%s\n", err->message);
         g_free(err);
         return 1;
     }
@@ -265,6 +276,7 @@ int main(int argc, char* argv[]) {
     g_signal_connect(G_OBJECT(deviceBox), "changed", G_CALLBACK(deviceBoxHandler), NULL);
 
     g_signal_connect(G_OBJECT(ipAddress), "changed", G_CALLBACK(ipAddressChanged), NULL);
+    g_signal_connect(G_OBJECT(ipAddress), "focus-out-event", G_CALLBACK(ipAddressEntered), NULL);
 
     GPtrArray* devices;
     get_devices(&devices);
