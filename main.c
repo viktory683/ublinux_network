@@ -6,7 +6,6 @@
 #include <jansson.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #define UI_FILE "design.glade"
@@ -45,11 +44,11 @@ struct Device {
     char* ip6_gateway;
     int mtu;
     int state;
-    GPtrArray* ip4_addresses; // st
+    GPtrArray* ip4_addresses; // str
     GPtrArray* ip4_dnses;     // str
-    GPtrArray* ip4_route;     // IPRoute
-    GPtrArray* ip6_address;   // str
-    GPtrArray* ip6_route;     // IPRoute
+    GPtrArray* ip4_routes;    // IPRoute
+    GPtrArray* ip6_addresses; // str
+    GPtrArray* ip6_routes;    // IPRoute
 };
 
 char* parse_string(json_t* object, const char* key) {
@@ -86,15 +85,15 @@ int parse_int(json_t* object, const char* key) {
     return json_integer_value(value);
 }
 
-void parse_devices(json_t* root, int* devices_count, struct Device*** devices) {
+// TODO split into smaller functions
+void parse_devices(json_t* root, GPtrArray** devices) {
     if (!json_is_array(root)) {
         fprintf(stderr, "error: root is not an array\n");
         json_decref(root);
         return;
     }
 
-    (*devices_count) = (int)json_array_size(root);
-    (*devices) = malloc(json_array_size(root) * sizeof(struct Device*));
+    *devices = g_ptr_array_new();
 
     for (int i = 0; i < json_array_size(root); i++) {
         json_t* data = json_array_get(root, i);
@@ -104,20 +103,20 @@ void parse_devices(json_t* root, int* devices_count, struct Device*** devices) {
             return;
         }
 
-        (*devices)[i] = malloc(sizeof(struct Device));
+        struct Device* dev = malloc(sizeof(struct Device));
 
-        (*devices)[i]->device = parse_string(data, "device");
-        (*devices)[i]->type = parse_string(data, "type");
-        (*devices)[i]->hwaddr = parse_string(data, "hwaddr");
-        (*devices)[i]->mtu = parse_int(data, "mtu");
-        (*devices)[i]->state = parse_int(data, "state");
-        (*devices)[i]->state_text = parse_string(data, "state_text");
-        (*devices)[i]->connection = parse_string(data, "connection");
-        (*devices)[i]->con_path = parse_string(data, "con_path");
-        (*devices)[i]->ip4_gateway = parse_string(data, "ip4_gateway");
-        (*devices)[i]->ip6_gateway = parse_string(data, "ip6_gateway");
+        dev->device = parse_string(data, "device");
+        dev->type = parse_string(data, "type");
+        dev->hwaddr = parse_string(data, "hwaddr");
+        dev->mtu = parse_int(data, "mtu");
+        dev->state = parse_int(data, "state");
+        dev->state_text = parse_string(data, "state_text");
+        dev->connection = parse_string(data, "connection");
+        dev->con_path = parse_string(data, "con_path");
+        dev->ip4_gateway = parse_string(data, "ip4_gateway");
+        dev->ip6_gateway = parse_string(data, "ip6_gateway");
 
-        (*devices)[i]->ip4_addresses = g_ptr_array_new();
+        dev->ip4_addresses = g_ptr_array_new();
         int ip4_address_index = 1;
         char* ip4_address;
         do {
@@ -127,13 +126,12 @@ void parse_devices(json_t* root, int* devices_count, struct Device*** devices) {
             strcat(key, str_index);
             ip4_address = parse_string(data, key);
             if (ip4_address) {
-                g_ptr_array_add((*devices)[i]->ip4_addresses, ip4_address);
+                g_ptr_array_add(dev->ip4_addresses, ip4_address);
             }
             ip4_address_index++;
-            
         } while (ip4_address);
 
-        (*devices)[i]->ip4_dnses = g_ptr_array_new();
+        dev->ip4_dnses = g_ptr_array_new();
         int ip4_dns_index = 1;
         char* ip4_dns;
         do {
@@ -143,19 +141,74 @@ void parse_devices(json_t* root, int* devices_count, struct Device*** devices) {
             strcat(key, str_index);
             ip4_dns = parse_string(data, key);
             if (ip4_dns) {
-                g_ptr_array_add((*devices)[i]->ip4_dnses, ip4_dns);
+                g_ptr_array_add(dev->ip4_dnses, ip4_dns);
             }
             ip4_dns_index++;
-            
         } while (ip4_dns);
+
+        dev->ip4_routes = g_ptr_array_new();
+        int ip4_route_index = 1;
+        json_t* ip4_route;
+        do {
+            char key[16] = "ip4_route_";
+            char str_index[2];
+            sprintf(str_index, "%d", ip4_route_index);
+            strcat(key, str_index);
+            ip4_route = json_object_get(data, key);
+            if (ip4_route) {
+                struct IPRoute* ip_route = malloc(sizeof(struct IPRoute));
+                ip_route->dst = parse_string(ip4_route, "dst");
+                ip_route->nh = parse_string(ip4_route, "nh");
+                ip_route->mt = parse_int(ip4_route, "mt");
+                g_ptr_array_add(dev->ip4_routes, ip_route);
+            }
+            ip4_route_index++;
+        } while (ip4_route);
+
+        dev->ip6_addresses = g_ptr_array_new();
+        int ip6_address_index = 1;
+        char* ip6_address;
+        do {
+            char key[16] = "ip6_address_";
+            char str_index[2];
+            sprintf(str_index, "%d", ip6_address_index);
+            strcat(key, str_index);
+            ip6_address = parse_string(data, key);
+            if (ip6_address) {
+                g_ptr_array_add(dev->ip6_addresses, ip6_address);
+            }
+            ip6_address_index++;
+
+        } while (ip6_address);
+
+        dev->ip6_routes = g_ptr_array_new();
+        int ip6_route_index = 1;
+        json_t* ip6_route;
+        do {
+            char key[16] = "ip6_route_";
+            char str_index[2];
+            sprintf(str_index, "%d", ip6_route_index);
+            strcat(key, str_index);
+            ip6_route = json_object_get(data, key);
+            if (ip6_route) {
+                struct IPRoute* ip_route = malloc(sizeof(struct IPRoute));
+                ip_route->dst = parse_string(ip6_route, "dst");
+                ip_route->nh = parse_string(ip6_route, "nh");
+                ip_route->mt = parse_int(ip6_route, "mt");
+                g_ptr_array_add(dev->ip6_routes, ip_route);
+            }
+            ip6_route_index++;
+        } while (ip6_route);
+
+        g_ptr_array_add(*devices, dev);
     }
 }
 
-void get_devices(int* devices_count, struct Device*** devices) {
+void get_devices(GPtrArray** devices) {
     char* output = NULL;
     executeCommand("nmcli device show | jc --nmcli", &output);
 
-    parse_devices(parse_json(output), devices_count, devices);
+    parse_devices(parse_json(output), devices);
 
     free(output);
 }
@@ -248,61 +301,42 @@ int main(int argc, char* argv[]) {
 
     g_signal_connect(G_OBJECT(ipAddress), "changed", G_CALLBACK(ipAddressChanged), NULL);
 
-    int devices_count;
-    struct Device** devices;
-    get_devices(&devices_count, &devices);
-    if (devices == NULL) {
+    GPtrArray* devices;
+    get_devices(&devices);
+    if (devices->len == 0) {
         fprintf(stderr, "No devices");
-    }
-    for (int i = 0; i < devices_count; i++) {
-        printf("device: %s\n", devices[i]->device);
-        printf("type: %s\n", devices[i]->type);
-        printf("hwaddr: %s\n", devices[i]->hwaddr);
-        printf("mtu: %d\n", devices[i]->mtu);
-        printf("state: %d\n", devices[i]->state);
-        printf("state_text: %s\n", devices[i]->state_text);
-        printf("connection: %s\n", devices[i]->connection);
-        printf("con_path: %s\n", devices[i]->con_path);
-        // printf("ip4_address_1: %s\n", devices[i]->ip4_address_1);
-        printf("ip4_gateway: %s\n", devices[i]->ip4_gateway);
-
-        for (int j = 0; j < devices[i]->ip4_addresses->len; j++) {
-            printf("ip4_address_%d: %s\n", j, g_ptr_array_index(devices[i]->ip4_addresses, j));
-        }
-
-        for (int j = 0; j < devices[i]->ip4_dnses->len; j++) {
-            printf("ip4_dns_%d: %s\n", j, g_ptr_array_index(devices[i]->ip4_dnses, j));
-        }
-        // printf("ip4_route_1:\n");
-        // printf("\tdst: %s\n", devices[i]->ip4_route_1.dst);
-        // printf("\tnh: %s\n", devices[i]->ip4_route_1.nh);
-        // printf("\tmt: %d\n", devices[i]->ip4_route_1.mt);
-        printf("================================================================\n");
+        return 0;
     }
 
-    char** device_names = malloc(devices_count * sizeof(char*));
-    for (int i = 0; i < devices_count; i++) {
-        device_names[i] = devices[i]->device;
+    char** device_names = malloc(devices->len * sizeof(char*));
+    for (int i = 0; i < devices->len; i++) {
+        struct Device* dev = g_ptr_array_index(devices, i);
+        device_names[i] = dev->device;
     }
 
-    updateComboBoxItems(deviceBox, devices_count, device_names);
-
-    for (int i = 0; i < devices_count; i++) {
-        free(device_names[i]);
-    }
-    free(device_names);
-
-    for (int i = 0; i < devices_count; i++) {
-        free(devices[i]);
-    }
-    free(devices);
+    updateComboBoxItems(deviceBox, devices->len, device_names);
 
     // freeing up memory
     g_object_unref(G_OBJECT(builder));
 
     gtk_widget_show(GTK_WIDGET(topWindow));
 
-    // gtk_main();
+    gtk_main();
+
+    for (int i = 0; i < devices->len; i++) {
+        free(device_names[i]);
+    }
+    free(device_names);
+
+    for (int i = 0; i < devices->len; i++) {
+        struct Device* dev = g_ptr_array_index(devices, i);
+        g_ptr_array_free(dev->ip4_addresses, true);
+        g_ptr_array_free(dev->ip4_dnses, true);
+        g_ptr_array_free(dev->ip4_routes, true);
+        g_ptr_array_free(dev->ip6_addresses, true);
+        g_ptr_array_free(dev->ip6_routes, true);
+    }
+    g_ptr_array_free(devices, true);
 
     return 0;
 }
