@@ -302,9 +302,7 @@ int main(int argc, char* argv[]) {
 
     gtk_widget_show(GTK_WIDGET(topWindow));
 
-    return 0;
-
-    gtk_main();
+    // gtk_main();
 
     return 0;
 }
