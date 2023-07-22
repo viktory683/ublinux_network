@@ -1,5 +1,7 @@
 #include <stdbool.h>
-#include <jansson.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /**
  * Executes a system command and stores the command output in a dynamically allocated memory.
@@ -10,7 +12,7 @@
  * @param output A pointer to a character pointer where the command output will be stored.
  *               The memory for the output will be dynamically allocated and should be freed by the caller.
  */
-void executeCommand(const char* command, char** output) {
+void execute_command(const char* command, char** output) {
     FILE* fp;
     char buffer[1024];
     size_t outputSize = 0;
@@ -45,19 +47,6 @@ void executeCommand(const char* command, char** output) {
     }
 
     pclose(fp);
-}
-
-json_t* parse_json(const char* text) {
-    json_t* root;
-    json_error_t error;
-    root = json_loads(text, 0, &error);
-
-    if (!root) {
-        fprintf(stderr, "Error: on line %d: %s\n", error.line, error.text);
-        return NULL;
-    }
-
-    return root;
 }
 
 int safe_check() {

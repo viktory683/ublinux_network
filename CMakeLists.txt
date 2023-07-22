@@ -19,6 +19,6 @@ add_definitions(${JANSSON_CFLAGS_OTHER})
 
 add_executable(network main.c)
 
-target_link_libraries(network ${GTK3_LIBRARIES} ${JANSSON_LIBRARIES})
+target_link_libraries(network ${GTK3_LIBRARIES} ${JANSSON_LIBRARIES} -Wl,-export-dynamic)
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/design.glade DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

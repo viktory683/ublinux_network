@@ -63,3 +63,5 @@ CMakeCache.txt
 build/
 network
 .cache/
+
+Makefile

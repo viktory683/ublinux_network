@@ -1,5 +1,5 @@
-#include "handlers.h"
 #include "helpers.h"
+#include "json_helpers.h"
 #include <arpa/inet.h>
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -11,174 +11,47 @@
 #define UI_FILE "design.glade"
 
 GtkBuilder* builder;
-GtkWindow* topWindow;
+GtkWidget* topWindow;
 
-GtkComboBoxText* deviceBox;
+GtkComboBoxText* interfaceComboBox;
 
-GtkEntry* ipAddress;
-GtkPopover* ipAddressErrorPopup;
-GtkLabel* ipAddressErrorText;
+GtkEntry* ipAddressEntry;
+GtkPopover* ipAddressPopover;
+GtkLabel* ipAddressPopoverLabel;
 
-void updateComboBoxItems(GtkComboBoxText* box, int itemc, char** items) {
+GPtrArray* interfaces;
+
+void update_combo_box_items(GtkComboBoxText* box, int itemc, char** itemv) {
     for (int i = 0; i < itemc; i++) {
-        gtk_combo_box_text_append(box, NULL, items[i]);
+        gtk_combo_box_text_append(box, NULL, itemv[i]);
     }
 
     gtk_combo_box_set_active(GTK_COMBO_BOX(box), 0);
 }
 
-struct IPRoute {
-    char* dst;
-    char* nh;
-    int mt;
-};
+void update_interface_combo_box(GtkComboBoxText* box, GPtrArray* interfaces) {
+    char** devices = malloc(interfaces->len * sizeof(char*));
 
-struct Device {
-    char* device;
-    char* type;
-    char* hwaddr;
-    char* state_text;
-    char* connection;
-    char* con_path;
-    char* ip4_gateway;
-    char* ip6_gateway;
-    int mtu;
-    int state;
-    GPtrArray* ip4_addresses; // str
-    GPtrArray* ip4_dnses;     // str
-    GPtrArray* ip4_routes;    // IPRoute
-    GPtrArray* ip6_addresses; // str
-    GPtrArray* ip6_routes;    // IPRoute
-};
-
-char* parse_string(json_t* object, const char* key) {
-    if (!json_is_object(object)) {
-        fprintf(stderr, "error: object is not a json object\n");
-        // json_decref(object);
-        return NULL;
+    for (int i = 0; i < interfaces->len; i++) {
+        struct Device* dev = interfaces->pdata[i];
+        devices[i] = dev->device;
     }
 
-    json_t* value = json_object_get(object, key);
-    if (!json_is_string(value)) {
-        fprintf(stderr, "error: %s is not a string\n", key);
-        // json_decref(object);
-        return NULL;
-    }
+    update_combo_box_items(box, interfaces->len, devices);
 
-    return json_string_value(value);
-}
-
-void parse_int(json_t* object, const char* key, int* value) {
-    if (!json_is_object(object)) {
-        fprintf(stderr, "error: object is not a json object\n");
-        // json_decref(object);
-        // return NULL;
-    }
-
-    json_t* value_t = json_object_get(object, key);
-    if (!json_is_integer(value_t)) {
-        fprintf(stderr, "error: %s is not a integer\n", key);
-        // json_decref(object);
-        // return NULL;
-    }
-
-    *value = json_integer_value(value_t);
-}
-
-GPtrArray* parse_string_array(json_t* obj, const char* key_prefix, int start) {
-    GPtrArray* array = g_ptr_array_new();
-
-    char* value;
-    do {
-        char key[32];
-        strcpy(key, key_prefix);
-        char str_index[2];
-        sprintf(str_index, "%d", start);
-        strcat(key, str_index);
-        value = parse_string(obj, key);
-        if (value) {
-            g_ptr_array_add(array, value);
-        }
-        start++;
-    } while (value);
-
-    return array;
-}
-
-GPtrArray* parse_IPRoute_array(json_t* obj, const char* key_prefix, int start) {
-    GPtrArray* array = g_ptr_array_new();
-
-    json_t* value;
-    do {
-        char key[32];
-        strcpy(key, key_prefix);
-        char str_index[2];
-        sprintf(str_index, "%d", start);
-        strcat(key, str_index);
-        value = json_object_get(obj, key);
-        if (value) {
-            struct IPRoute* ip_route = malloc(sizeof(struct IPRoute));
-            ip_route->dst = parse_string(value, "dst");
-            ip_route->nh = parse_string(value, "nh");
-            parse_int(value, "mt", &(ip_route->mt));
-            g_ptr_array_add(array, ip_route);
-        }
-        start++;
-    } while (value);
-
-    return array;
-}
-
-void parse_devices(json_t* root, GPtrArray** devices) {
-    if (!json_is_array(root)) {
-        fprintf(stderr, "error: root is not an array\n");
-        json_decref(root);
-        return;
-    }
-
-    *devices = g_ptr_array_new();
-
-    for (int i = 0; i < json_array_size(root); i++) {
-        json_t* data = json_array_get(root, i);
-        if (!json_is_object(data)) {
-            fprintf(stderr, "error: commit data %d is not an object\n", i + 1);
-            json_decref(root);
-            return;
-        }
-
-        struct Device* dev = malloc(sizeof(struct Device));
-
-        dev->device = parse_string(data, "device");
-        dev->type = parse_string(data, "type");
-        dev->hwaddr = parse_string(data, "hwaddr");
-        parse_int(data, "mtu", &(dev->mtu));
-        parse_int(data, "state", &(dev->state));
-        dev->state_text = parse_string(data, "state_text");
-        dev->connection = parse_string(data, "connection");
-        dev->con_path = parse_string(data, "con_path");
-        dev->ip4_gateway = parse_string(data, "ip4_gateway");
-        dev->ip6_gateway = parse_string(data, "ip6_gateway");
-
-        dev->ip4_addresses = parse_string_array(data, "ip4_address_", 1);
-        dev->ip4_dnses = parse_string_array(data, "ip4_dns_", 1);
-        dev->ip4_routes = parse_IPRoute_array(data, "ip4_route_", 1);
-        dev->ip6_addresses = parse_string_array(data, "ip6_address_", 1);
-        dev->ip6_routes = parse_IPRoute_array(data, "ip6_route_", 1);
-
-        g_ptr_array_add(*devices, dev);
-    }
+    free(devices);
 }
 
 void get_devices(GPtrArray** devices) {
     char* output = NULL;
-    executeCommand("nmcli device show | jc --nmcli", &output);
+    execute_command("nmcli device show | jc --nmcli", &output);
 
-    parse_devices(parse_json(output), devices);
+    json_parse_devices(parse_json(output), devices);
 
     free(output);
 }
 
-int isIPValid(const char* ip_address) {
+int is_ip_valid(const char* ip_address) {
     // 1 | invalid symbols
     char* validSymbols = "1234567890.";
     for (int i = 0; i < strlen(ip_address); i++) {
@@ -210,16 +83,25 @@ int isIPValid(const char* ip_address) {
     return 0;
 }
 
-void ipAddressChanged(GtkEntry* entry, gpointer user_data) {
+// ======== HANDLERS ========
+
+G_MODULE_EXPORT void on_interface_combo_box_changed(GtkComboBoxText* box, gpointer user_data) {
+    char* choosen = gtk_combo_box_text_get_active_text(box);
+
+    // TODO update UI fields (sensitive etc) based on device info (dhcp/ip/mask etc)
+    printf("choosen device: '%s'\n", choosen);
+}
+
+G_MODULE_EXPORT void on_ip_address_entry_changed(GtkEntry* entry, gpointer user_data) {
     const char* text = gtk_entry_get_text(entry);
     printf("text: %s\n", text);
 }
 
-gboolean ipAddressEntered(GtkWidget* entry, GdkEventFocus event, gpointer user_data) {
-    const char* ip_address = gtk_entry_get_text(ipAddress);
+G_MODULE_EXPORT gboolean on_ip_address_entry_focus_out(GtkWidget* entry, GdkEventFocus event, gpointer user_data) {
+    const char* ip_address = gtk_entry_get_text(ipAddressEntry);
 
     char* errorMessage = NULL;
-    switch (isIPValid(ip_address)) {
+    switch (is_ip_valid(ip_address)) {
     case 1:
         errorMessage = "IP address can only contain numbers and dots\nExample: 192.168.0.1";
         break;
@@ -231,8 +113,8 @@ gboolean ipAddressEntered(GtkWidget* entry, GdkEventFocus event, gpointer user_d
         break;
     }
     if (errorMessage) {
-        gtk_label_set_text(ipAddressErrorText, errorMessage);
-        gtk_popover_popup(ipAddressErrorPopup);
+        gtk_label_set_text(ipAddressPopoverLabel, errorMessage);
+        gtk_popover_popup(ipAddressPopover);
         return false;
     }
 
@@ -241,6 +123,24 @@ gboolean ipAddressEntered(GtkWidget* entry, GdkEventFocus event, gpointer user_d
 
     return true;
 }
+
+G_MODULE_EXPORT void onExit(GtkWidget* w) {
+    printf("Exit");
+
+    for (int i = 0; i < interfaces->len; i++) {
+        struct Device* dev = g_ptr_array_index(interfaces, i);
+        g_ptr_array_free(dev->ip4_addresses, true);
+        g_ptr_array_free(dev->ip4_dnses, true);
+        g_ptr_array_free(dev->ip4_routes, true);
+        g_ptr_array_free(dev->ip6_addresses, true);
+        g_ptr_array_free(dev->ip6_routes, true);
+    }
+    g_ptr_array_free(interfaces, true);
+
+    gtk_main_quit();
+}
+
+// =========================
 
 int main(int argc, char* argv[]) {
     if (safe_check()) {
@@ -263,60 +163,26 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    topWindow = GTK_WINDOW(gtk_builder_get_object(builder, "topWindow"));
+    topWindow = GTK_WIDGET(gtk_builder_get_object(builder, "topWindow"));
 
-    deviceBox = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "deviceBox"));
+    interfaceComboBox = GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "interfaceComboBox"));
 
-    ipAddress = GTK_ENTRY(gtk_builder_get_object(builder, "ipAddress"));
-    ipAddressErrorPopup = GTK_POPOVER(gtk_builder_get_object(builder, "ipAddressPopup"));
-    ipAddressErrorText = GTK_LABEL(gtk_builder_get_object(builder, "ipAddressErrorText"));
+    ipAddressEntry = GTK_ENTRY(gtk_builder_get_object(builder, "ipAddressEntry"));
+    ipAddressPopover = GTK_POPOVER(gtk_builder_get_object(builder, "ipAddressPopover"));
+    ipAddressPopoverLabel = GTK_LABEL(gtk_builder_get_object(builder, "ipAddressPopoverLabel"));
 
-    g_signal_connect(G_OBJECT(topWindow), "destroy", gtk_main_quit, NULL);
+    get_devices(&interfaces);
 
-    g_signal_connect(G_OBJECT(deviceBox), "changed", G_CALLBACK(deviceBoxHandler), NULL);
+    update_interface_combo_box(interfaceComboBox, interfaces);
 
-    g_signal_connect(G_OBJECT(ipAddress), "changed", G_CALLBACK(ipAddressChanged), NULL);
-    g_signal_connect(G_OBJECT(ipAddress), "focus-out-event", G_CALLBACK(ipAddressEntered), NULL);
-
-    GPtrArray* devices;
-    get_devices(&devices);
-    if (devices->len == 0) {
-        fprintf(stderr, "No devices");
-        return 0;
-    }
-
-    char** device_names = malloc(devices->len * sizeof(char*));
-    for (int i = 0; i < devices->len; i++) {
-        struct Device* dev = g_ptr_array_index(devices, i);
-        device_names[i] = dev->device;
-    }
-
-    updateComboBoxItems(deviceBox, devices->len, device_names);
+    gtk_builder_connect_signals(builder, NULL);
 
     // freeing up memory
     g_object_unref(G_OBJECT(builder));
 
-    gtk_widget_show(GTK_WIDGET(topWindow));
+    gtk_widget_show_all(topWindow);
 
     gtk_main();
 
-    for (int i = 0; i < devices->len; i++) {
-        free(device_names[i]);
-    }
-    free(device_names);
-
-    for (int i = 0; i < devices->len; i++) {
-        struct Device* dev = g_ptr_array_index(devices, i);
-        g_ptr_array_free(dev->ip4_addresses, true);
-        g_ptr_array_free(dev->ip4_dnses, true);
-        g_ptr_array_free(dev->ip4_routes, true);
-        g_ptr_array_free(dev->ip6_addresses, true);
-        g_ptr_array_free(dev->ip6_routes, true);
-    }
-    g_ptr_array_free(devices, true);
-
     return 0;
 }
-
-// TODO:
-//     * update device setting on focus-out-event from ipAddress
