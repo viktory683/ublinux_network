@@ -232,11 +232,13 @@
                           </packing>
                         </child>
                         <child>
-                          <object class="GtkEntry">
+                          <object class="GtkEntry" id="maskEntry">
                             <property name="visible">True</property>
                             <property name="can-focus">True</property>
                             <property name="max-length">15</property>
                             <property name="placeholder-text" translatable="yes">255.255.255.0</property>
+                            <signal name="changed" handler="on_mask_entry_changed" swapped="no"/>
+                            <signal name="focus-out-event" handler="on_mask_entry_focus_out" swapped="no"/>
                           </object>
                           <packing>
                             <property name="left-attach">1</property>
@@ -851,6 +853,20 @@
     <property name="position">bottom</property>
     <child>
       <object class="GtkLabel" id="ipAddressPopoverLabel">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="xpad">8</property>
+        <property name="ypad">8</property>
+        <property name="label" translatable="yes">label</property>
+      </object>
+    </child>
+  </object>
+  <object class="GtkPopover" id="maskPopover">
+    <property name="can-focus">False</property>
+    <property name="relative-to">maskEntry</property>
+    <property name="position">bottom</property>
+    <child>
+      <object class="GtkLabel" id="maskPopoverLabel">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
         <property name="xpad">8</property>

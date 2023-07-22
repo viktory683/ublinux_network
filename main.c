@@ -19,6 +19,10 @@ GtkEntry* ipAddressEntry;
 GtkPopover* ipAddressPopover;
 GtkLabel* ipAddressPopoverLabel;
 
+GtkEntry* maskEntry;
+GtkPopover* maskPopover;
+GtkLabel* maskPopoverLabel;
+
 GPtrArray* interfaces;
 
 void update_combo_box_items(GtkComboBoxText* box, int itemc, char** itemv) {
@@ -51,38 +55,6 @@ void get_devices(GPtrArray** devices) {
     free(output);
 }
 
-int is_ip_valid(const char* ip_address) {
-    // 1 | invalid symbols
-    char* validSymbols = "1234567890.";
-    for (int i = 0; i < strlen(ip_address); i++) {
-        if (!strchr(validSymbols, ip_address[i])) {
-            return 1;
-        }
-    }
-
-    // 2 | octets != 4
-    int point_count = 0;
-    for (int i = 0; i < strlen(ip_address); i++) {
-        if (ip_address[i] == '.') {
-            point_count++;
-        }
-    }
-    if (point_count != 3) {
-        return 2;
-    }
-
-    // 3 | 0 <= octet < 256
-    int octets[4];
-    sscanf(ip_address, "%d.%d.%d.%d", &octets[0], &octets[1], &octets[2], &octets[3]);
-    for (int i = 0; i < 4; i++) {
-        if (octets[i] < 0 || octets[i] > 255) {
-            return 3;
-        }
-    }
-
-    return 0;
-}
-
 // ======== HANDLERS ========
 
 G_MODULE_EXPORT void on_interface_combo_box_changed(GtkComboBoxText* box, gpointer user_data) {
@@ -94,7 +66,7 @@ G_MODULE_EXPORT void on_interface_combo_box_changed(GtkComboBoxText* box, gpoint
 
 G_MODULE_EXPORT void on_ip_address_entry_changed(GtkEntry* entry, gpointer user_data) {
     const char* text = gtk_entry_get_text(entry);
-    printf("text: %s\n", text);
+    printf("RAW IP: %s\n", text);
 }
 
 G_MODULE_EXPORT gboolean on_ip_address_entry_focus_out(GtkWidget* entry, GdkEventFocus event, gpointer user_data) {
@@ -124,6 +96,42 @@ G_MODULE_EXPORT gboolean on_ip_address_entry_focus_out(GtkWidget* entry, GdkEven
     return true;
 }
 
+G_MODULE_EXPORT void on_mask_entry_changed(GtkEntry* entry, gpointer user_data) {
+    const char* text = gtk_entry_get_text(entry);
+    printf("RAW MASK: %s\n", text);
+}
+
+G_MODULE_EXPORT gboolean on_mask_entry_focus_out(GtkWidget* entry, GdkEventFocus event, gpointer user_data) {
+    const char* mask = gtk_entry_get_text(maskEntry);
+
+    char* errorMessage = NULL;
+    switch (is_mask_valid(mask)) {
+    case 1:
+        errorMessage = "Mask can only contain numbers and dots\nExample: 192.168.0.1";
+        break;
+    case 2:
+        errorMessage = "Mask address must consist of four octets";
+        break;
+    case 3:
+        errorMessage = "The octets of an Mask can only contain numbers in the range from 0 to 255";
+        break;
+    case 4:
+        errorMessage = "Invalid mask";
+        break;
+    }
+
+    if (errorMessage) {
+        gtk_label_set_text(maskPopoverLabel, errorMessage);
+        gtk_popover_popup(maskPopover);
+        return false;
+    }
+
+    // TODO change mask of interface with nmcli
+    printf("MASK: %s\n", mask);
+
+    return true;
+}
+
 G_MODULE_EXPORT void onExit(GtkWidget* w) {
     printf("Exit");
 
@@ -134,6 +142,15 @@ G_MODULE_EXPORT void onExit(GtkWidget* w) {
         g_ptr_array_free(dev->ip4_routes, true);
         g_ptr_array_free(dev->ip6_addresses, true);
         g_ptr_array_free(dev->ip6_routes, true);
+
+        free(dev->device);
+        free(dev->type);
+        free(dev->hwaddr);
+        free(dev->state_text);
+        free(dev->connection);
+        free(dev->con_path);
+        free(dev->ip4_gateway);
+        free(dev->ip6_gateway);
     }
     g_ptr_array_free(interfaces, true);
 
@@ -170,6 +187,10 @@ int main(int argc, char* argv[]) {
     ipAddressEntry = GTK_ENTRY(gtk_builder_get_object(builder, "ipAddressEntry"));
     ipAddressPopover = GTK_POPOVER(gtk_builder_get_object(builder, "ipAddressPopover"));
     ipAddressPopoverLabel = GTK_LABEL(gtk_builder_get_object(builder, "ipAddressPopoverLabel"));
+
+    maskEntry = GTK_ENTRY(gtk_builder_get_object(builder, "maskEntry"));
+    maskPopover = GTK_POPOVER(gtk_builder_get_object(builder, "maskPopover"));
+    maskPopoverLabel = GTK_LABEL(gtk_builder_get_object(builder, "maskPopoverLabel"));
 
     get_devices(&interfaces);
 
