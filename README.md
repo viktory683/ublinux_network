@@ -2,11 +2,11 @@
 
 ## В процессе
 
-![В процессе](image.png)
+![В процессе](design.png)
 
 ## Референс
 
-![Референс](ubl-settings-network_page_1.jpg)
+![Референс](design_ref.jpg)
 
 ## Ссылки
 
